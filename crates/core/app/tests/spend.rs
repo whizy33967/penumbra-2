@@ -1,7 +1,6 @@
 mod common;
 
 use self::common::TempStorageExt;
-use ark_ff::{Fp, UniformRand};
 use cnidarium::{ArcStateDeltaExt, StateDelta, TempStorage};
 use cnidarium_component::{ActionHandler as _, Component};
 use decaf377::{Fq, Fr};
@@ -161,7 +160,7 @@ async fn invalid_dummy_spend() {
     // construct a proof for this spend using only public information, attempting to prove a spend
     // of a dummy note.
     let ak = VerificationKey::<SpendAuth>::try_from([0u8; 32]).unwrap();
-    let nk = NullifierKey(Fp::rand(&mut OsRng));
+    let nk = NullifierKey(Fq::rand(&mut OsRng));
 
     let private = SpendProofPrivate {
         state_commitment_proof: proof,

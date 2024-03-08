@@ -1,6 +1,5 @@
+use decaf377::Fq;
 use std::fmt::Debug;
-
-use ark_ff::{BigInteger256, Fp256};
 
 use crate::prelude::*;
 
@@ -34,7 +33,7 @@ impl From<Option<Hash>> for OptionHash {
     fn from(hash: Option<Hash>) -> Self {
         match hash {
             Some(hash) => Self {
-                inner: hash.0 .0 .0,
+                inner: hash.0.to_le_limbs(),
             },
             None => Self {
                 // This sentinel value is not a valid `Fq` because it's bigger than the modulus,
@@ -53,9 +52,7 @@ impl From<OptionHash> for Option<Hash> {
             // We're directly constructing the hash here by coercing the bytes into the right type,
             // but this is safe because we know that the bytes are a real `Fq` and not the sentinel
             // value we just checked for
-            Some(Hash::new(Fp256::new_unchecked(BigInteger256::new(
-                hash.inner,
-            ))))
+            Some(Hash::new(Fq::from_le_limbs(hash.inner)))
         }
     }
 }
