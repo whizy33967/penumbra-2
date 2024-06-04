@@ -53,7 +53,7 @@ members = [
   "crates/util/tower-trace",
   "crates/view",
   "crates/wallet",
-  "tools/summonerd",
+  "tools/summonerd", "crates/test/migration-test",
 ]
 
 # Config for 'cargo dist'
