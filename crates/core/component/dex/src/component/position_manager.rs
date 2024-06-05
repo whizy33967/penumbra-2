@@ -70,7 +70,6 @@ pub trait PositionRead: StateRead {
             .map(|entry| match entry {
                 Ok((k, lp)) => {
                     let raw_id = <&[u8; 32]>::try_from(&k[103..135])?.to_owned();
-                    // TODO: skip DT validation?
                     Ok((position::Id(raw_id), lp))
                 }
                 Err(e) => Err(e),
@@ -207,7 +206,7 @@ pub trait PositionManager: StateWrite + PositionRead {
             new_state
         };
 
-        self.update_position(Some(prev_state), new_state).await?;
+        self.update_position(id, Some(prev_state), new_state).await?;
 
         Ok(())
     }
@@ -282,7 +281,7 @@ pub trait PositionManager: StateWrite + PositionRead {
 
         // Finally, record the new position state.
         self.record_proto(event::position_open(&position));
-        self.update_position(None, position).await?;
+        self.update_position(&id, None, position).await?;
 
         Ok(())
     }
@@ -376,7 +375,7 @@ pub trait PositionManager: StateWrite + PositionRead {
             .map_err(|e| tracing::warn!(?e, "failed to record position execution"))
             .ok();
 
-        self.update_position(Some(prev_state), new_state).await
+        self.update_position(&position_id, Some(prev_state), new_state).await
     }
 
     /// Withdraw from a closed position, incrementing its sequence number.
@@ -452,7 +451,7 @@ pub trait PositionManager: StateWrite + PositionRead {
             new_state
         };
 
-        self.update_position(Some(prev_state), new_state).await?;
+        self.update_position(&position_id, Some(prev_state), new_state).await?;
 
         Ok(reserves)
     }
@@ -469,10 +468,10 @@ trait Inner: StateWrite {
     #[instrument(level = "debug", skip_all)]
     async fn update_position(
         &mut self,
+        id: &position::Id,
         prev_state: Option<Position>,
         new_state: Position,
     ) -> Result<Position> {
-        let id = new_state.id();
         tracing::debug!(?id, prev_position_state = ?prev_state.as_ref().map(|p| &p.state), new_position_state = ?new_state.state, "updating position state");
         tracing::trace!(?id, ?prev_state, ?new_state, "updating position state");
 
