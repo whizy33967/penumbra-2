@@ -13,9 +13,9 @@ use position::State::*;
 pub(crate) trait PositionByPriceIndex: StateWrite {
     fn update_position_by_price_index(
         &mut self,
+        position_id: &position::Id,
         prev_state: &Option<Position>,
         new_state: &Position,
-        position_id: &position::Id,
     ) -> Result<()> {
         // Clear an existing record for the position, since changes to the
         // reserves or the position state might have invalidated it.

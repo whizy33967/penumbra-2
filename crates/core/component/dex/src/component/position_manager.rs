@@ -206,7 +206,8 @@ pub trait PositionManager: StateWrite + PositionRead {
             new_state
         };
 
-        self.update_position(id, Some(prev_state), new_state).await?;
+        self.update_position(id, Some(prev_state), new_state)
+            .await?;
 
         Ok(())
     }
@@ -375,7 +376,8 @@ pub trait PositionManager: StateWrite + PositionRead {
             .map_err(|e| tracing::warn!(?e, "failed to record position execution"))
             .ok();
 
-        self.update_position(&position_id, Some(prev_state), new_state).await
+        self.update_position(&position_id, Some(prev_state), new_state)
+            .await
     }
 
     /// Withdraw from a closed position, incrementing its sequence number.
@@ -451,7 +453,8 @@ pub trait PositionManager: StateWrite + PositionRead {
             new_state
         };
 
-        self.update_position(&position_id, Some(prev_state), new_state).await?;
+        self.update_position(&position_id, Some(prev_state), new_state)
+            .await?;
 
         Ok(reserves)
     }
@@ -479,12 +482,12 @@ trait Inner: StateWrite {
         Self::guard_invalid_transitions(&prev_state, &new_state, &id)?;
 
         // Update the DEX engine indices:
-        self.update_position_by_inventory_index(&prev_state, &new_state, &id)?;
-        self.update_asset_by_base_liquidity_index(&prev_state, &new_state, &id)
+        self.update_position_by_inventory_index(&id, &prev_state, &new_state)?;
+        self.update_asset_by_base_liquidity_index(&id, &prev_state, &new_state)
             .await?;
-        self.update_trading_pair_position_counter(&prev_state, &new_state, &id)
+        self.update_trading_pair_position_counter(&prev_state, &new_state)
             .await?;
-        self.update_position_by_price_index(&prev_state, &new_state, &id)?;
+        self.update_position_by_price_index(&id, &prev_state, &new_state)?;
 
         self.put(state_key::position_by_id(&id), new_state.clone());
         Ok(new_state)
