@@ -10,6 +10,7 @@ mod testnet72;
 mod testnet74;
 mod testnet76;
 mod testnet77;
+mod testnet78;
 
 use anyhow::{ensure, Context};
 use penumbra_governance::StateReadExt;
@@ -47,6 +48,9 @@ pub enum Migration {
     /// Testnet-77 migration:
     /// - Reset the halt bit
     Testnet77,
+    /// Testnet-78 migration:
+    /// - Populate the DEX NV price idnexes with position data
+    Testnet78,
 }
 
 impl Migration {
@@ -95,10 +99,12 @@ impl Migration {
             Migration::Testnet77 => {
                 testnet77::migrate(storage, pd_home.clone(), genesis_start).await?
             }
+            Migration::Testnet78 => {
+                testnet78::migrate(storage, pd_home.clone(), genesis_start).await?
+            }
         };
 
         if let Some(comet_home) = comet_home {
-            // TODO avoid this when refactoring to clean up migrations
             let genesis_path = pd_home.join("genesis.json");
             migrate_comet_data(comet_home, genesis_path).await?;
         }
