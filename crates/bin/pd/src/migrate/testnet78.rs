@@ -2,7 +2,7 @@
 use anyhow::{Context, Result};
 use cnidarium::{Snapshot, StateWrite};
 use cnidarium::{StateDelta, Storage};
-use futures::StreamExt;
+use futures::{pin_mut, StreamExt};
 use jmt::RootHash;
 use penumbra_app::app::StateReadExt as _;
 use penumbra_dex::lp::position;
@@ -96,15 +96,15 @@ pub async fn migrate(
 async fn reindex_dex_positions(delta: &mut StateDelta<Snapshot>) -> Result<()> {
     use penumbra_dex::component::PositionManager;
     tracing::info!("running dex re-indexing migration");
-    let prefix_lp = penumbra_dex::state_key::all_positions();
-    let mut stream_lp = delta.prefix::<Position>(&prefix_lp);
-
-    let stream_open_lp = stream_lp.filter_map(|entry| async {
+    let prefix_key_lp = penumbra_dex::state_key::all_positions();
+    let stream_all_lp = delta.prefix::<Position>(&prefix_key_lp);
+    let stream_open_lp = stream_all_lp.filter_map(|entry| async {
         match entry {
             Ok((_, lp)) if lp.state == position::State::Opened => Some(lp),
             _ => None,
         }
     });
+    pin_mut!(stream_open_lp);
 
     while let Some(lp) = stream_open_lp.next().await {
         // Re-hash the position, since the key is a bech32 string.
@@ -117,4 +117,5 @@ async fn reindex_dex_positions(delta: &mut StateDelta<Snapshot>) -> Result<()> {
         delta.open_position(lp).await?;
     }
     tracing::info!("completed dex migration");
+    Ok(())
 }
