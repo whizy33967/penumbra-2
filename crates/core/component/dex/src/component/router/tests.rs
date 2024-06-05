@@ -505,7 +505,7 @@ async fn test_multiple_similar_position() -> anyhow::Result<()> {
     // that we make up a context here.
     let context = pair_1.into_directed_trading_pair();
 
-    let mut p_1 = state_tx
+    let (_, mut p_1) = state_tx
         .best_position(&pair_1.into_directed_trading_pair())
         .await
         .unwrap()
@@ -514,7 +514,7 @@ async fn test_multiple_similar_position() -> anyhow::Result<()> {
     p_1.reserves = p_1.reserves.flip();
     state_tx.position_execution(p_1, context).await.unwrap();
 
-    let mut p_2 = state_tx
+    let (_, mut p_2) = state_tx
         .best_position(&pair_1.into_directed_trading_pair())
         .await
         .unwrap()

@@ -91,12 +91,9 @@ pub trait PositionRead: StateRead {
     async fn best_position(
         &self,
         pair: &DirectedTradingPair,
-    ) -> Result<Option<position::Position>> {
+    ) -> Result<Option<(position::Id, position::Position)>> {
         let mut positions_by_price = self.positions_by_price(pair);
-        match positions_by_price.next().await.transpose()? {
-            Some((_, lp)) => Ok(Some(lp)),
-            None => Ok(None),
-        }
+        positions_by_price.next().await.transpose()
     }
 
     /// Fetch the list of pending position closures.
