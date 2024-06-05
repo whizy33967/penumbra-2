@@ -446,8 +446,8 @@ async fn position_get_best_price() -> anyhow::Result<()> {
     let positions = state_tx
         .positions_by_price(&pair)
         .then(|result| async {
-            let id = result.unwrap();
-            state_tx.position_by_id(&id).await.unwrap().unwrap()
+            let (_, lp) = result.unwrap();
+            lp
         })
         .collect::<Vec<position::Position>>()
         .await;
@@ -463,8 +463,8 @@ async fn position_get_best_price() -> anyhow::Result<()> {
     let positions = state_tx
         .positions_by_price(&pair)
         .then(|result| async {
-            let id = result.unwrap();
-            state_tx.position_by_id(&id).await.unwrap().unwrap()
+            let (_, lp) = result.unwrap();
+            lp
         })
         .collect::<Vec<position::Position>>()
         .await;

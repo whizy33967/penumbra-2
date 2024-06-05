@@ -1,4 +1,5 @@
 use cnidarium::StateWrite;
+use penumbra_proto::StateWriteProto;
 
 use crate::{
     lp::position::{self, Position},
@@ -57,7 +58,10 @@ trait Inner: StateWrite {
                 end: pair.asset_2(),
             };
             let phi12 = phi.component.clone();
-            self.nonverifiable_put_raw(engine::price_index::key(&pair12, &phi12, &id), vec![]);
+            self.nonverifiable_put(
+                engine::price_index::key(&pair12, &phi12, &id),
+                position.clone(),
+            );
             tracing::debug!("indexing position for 1=>2 trades");
         }
 
@@ -68,7 +72,10 @@ trait Inner: StateWrite {
                 end: pair.asset_1(),
             };
             let phi21 = phi.component.flip();
-            self.nonverifiable_put_raw(engine::price_index::key(&pair21, &phi21, &id), vec![]);
+            self.nonverifiable_put(
+                engine::price_index::key(&pair21, &phi21, &id),
+                position.clone(),
+            );
             tracing::debug!("indexing position for 2=>1 trades");
         }
     }

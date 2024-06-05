@@ -62,14 +62,16 @@ pub trait PositionRead: StateRead {
     fn positions_by_price(
         &self,
         pair: &DirectedTradingPair,
-    ) -> Pin<Box<dyn Stream<Item = Result<position::Id>> + Send + 'static>> {
+    ) -> Pin<Box<dyn Stream<Item = Result<(position::Id, position::Position)>> + Send + 'static>>
+    {
         let prefix = engine::price_index::prefix(pair);
         tracing::trace!(prefix = ?EscapedByteSlice(&prefix), "searching for positions by price");
-        self.nonverifiable_prefix_raw(&prefix)
+        self.nonverifiable_prefix(&prefix)
             .map(|entry| match entry {
-                Ok((k, _)) => {
+                Ok((k, lp)) => {
                     let raw_id = <&[u8; 32]>::try_from(&k[103..135])?.to_owned();
-                    Ok(position::Id(raw_id))
+                    // TODO: skip DT validation?
+                    Ok((position::Id(raw_id), lp))
                 }
                 Err(e) => Err(e),
             })
@@ -93,7 +95,7 @@ pub trait PositionRead: StateRead {
     ) -> Result<Option<position::Position>> {
         let mut positions_by_price = self.positions_by_price(pair);
         match positions_by_price.next().await.transpose()? {
-            Some(id) => self.position_by_id(&id).await,
+            Some((_, lp)) => Ok(Some(lp)),
             None => Ok(None),
         }
     }
@@ -462,7 +464,7 @@ impl<T: StateWrite + ?Sized + Chandelier> PositionManager for T {}
 trait Inner: StateWrite {
     /// Writes a position to the state, updating all necessary indexes.
     ///
-    /// This should be the SOLE ENTRYPOINT for writing positions to the state.
+    /// This should be the **SOLE ENTRYPOINT** for writing positions to the state.
     /// All other position changes exposed by the `PositionManager` should run through here.
     #[instrument(level = "debug", skip_all)]
     async fn update_position(
@@ -478,12 +480,12 @@ trait Inner: StateWrite {
         Self::guard_invalid_transitions(&prev_state, &new_state, &id)?;
 
         // Update the DEX engine indices:
-        self.update_position_by_price_index(&prev_state, &new_state, &id)?;
         self.update_position_by_inventory_index(&prev_state, &new_state, &id)?;
         self.update_asset_by_base_liquidity_index(&prev_state, &new_state, &id)
             .await?;
         self.update_trading_pair_position_counter(&prev_state, &new_state, &id)
             .await?;
+        self.update_position_by_price_index(&prev_state, &new_state, &id)?;
 
         self.put(state_key::position_by_id(&id), new_state.clone());
         Ok(new_state)

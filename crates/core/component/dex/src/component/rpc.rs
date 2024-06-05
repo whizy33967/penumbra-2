@@ -453,21 +453,9 @@ impl QueryService for Server {
         let s = state
             .positions_by_price(&pair)
             .take(limit)
-            .and_then(move |id| {
-                let state2 = state.clone();
-                async move {
-                    let position = state2.position_by_id(&id).await?.ok_or_else(|| {
-                        anyhow::anyhow!("indexed position not found in state: {}", id)
-                    })?;
-                    anyhow::Ok(position)
-                }
-            })
-            .map_ok(|position| {
-                let id = position.id();
-                LiquidityPositionsByPriceResponse {
-                    data: Some(position.into()),
-                    id: Some(id.into()),
-                }
+            .map_ok(|(id, position)| LiquidityPositionsByPriceResponse {
+                data: Some(position.into()),
+                id: Some(id.into()),
             })
             .map_err(|e: anyhow::Error| {
                 tonic::Status::internal(format!("error retrieving positions: {:#}", e))
