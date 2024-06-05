@@ -243,6 +243,3 @@ url                              = { version = "2.2" }
 tonic                            = { git = "https://github.com/penumbra-zone/tonic.git", tag = "v0.10.3-penumbra" }
 tonic-reflection                 = { git = "https://github.com/penumbra-zone/tonic.git", tag = "v0.10.3-penumbra" }
 tonic-web                        = { git = "https://github.com/penumbra-zone/tonic.git", tag = "v0.10.3-penumbra" }
-
-[profile.release]
-debug = true

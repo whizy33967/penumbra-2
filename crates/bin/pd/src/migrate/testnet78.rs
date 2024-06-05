@@ -1,10 +1,8 @@
-//! Contains functions related to the migration script of Testnet77.
-//! The Testnet 77 release included several consensus-breaking changes,
-//! but no state-breaking changes, so the migration is essentially a no-op,
-//! other than resetting the halt bit.
-use anyhow::Context;
-use cnidarium::StateWrite;
+//! Contains functions related to the migration script for Testnet78.
+use anyhow::{Context, Result};
+use cnidarium::{Snapshot, StateWrite};
 use cnidarium::{StateDelta, Storage};
+use futures::StreamExt;
 use jmt::RootHash;
 use penumbra_app::app::StateReadExt as _;
 use penumbra_dex::lp::position;
@@ -21,7 +19,7 @@ use crate::testnet::generate::TestnetConfig;
 /// Run the full migration, given an export path and a start time for genesis.
 ///
 /// Menu:
-/// - Reconstruct a correct VCB balance for the auction component.
+/// - Close and re-open all *open* positions so that they are re-indexed.
 #[instrument]
 pub async fn migrate(
     storage: Storage,
@@ -40,42 +38,10 @@ pub async fn migrate(
         .await
         .expect("chain state has a block height");
     let post_upgrade_height = pre_upgrade_height.wrapping_add(1);
-
-    // We want to equip the price indices with corresponding positions.
-    // To do this, we could either:
-    // Iterate over each position in the DEX
-    // Update the price index
-    // This is tricky because they are internals.
-    // Or
-    // Iterate over each position in the dex
-    // Store the positions
-    // Close them
-    // Open new positions.
-    /* Migration */
-    use futures::StreamExt;
-    use penumbra_dex::component::PositionManager;
-
     let mut delta = StateDelta::new(initial_state);
 
-    let prefix_lp = penumbra_dex::state_key::all_positions();
-    let mut position_stream = delta.prefix::<Position>(&prefix_lp);
-
-    while let Some(entry) = position_stream.next().await {
-        let (_, lp) = entry?;
-        if lp.state != position::State::Opened {
-            continue;
-        }
-
-        // Re-hash the position, since the key is a bech32 string.
-        let id = lp.id();
-        // Close the position, adjusting all its index entries.
-        delta.close_position_by_id(&id).await?;
-        // Erase the position from the state, so that `update_position` allows the write.
-        delta.delete(penumbra_dex::state_key::position_by_id(&id));
-        // Open a position with the adjusted indexing logic.
-        delta.open_position(lp).await?;
-    }
-
+    /* Migration */
+    reindex_dex_positions(&mut delta).await?;
     /* ********* */
 
     // Reset the halt flag, and application height.
@@ -125,4 +91,30 @@ pub async fn migrate(
     );
 
     Ok(())
+}
+
+async fn reindex_dex_positions(delta: &mut StateDelta<Snapshot>) -> Result<()> {
+    use penumbra_dex::component::PositionManager;
+    tracing::info!("running dex re-indexing migration");
+    let prefix_lp = penumbra_dex::state_key::all_positions();
+    let mut stream_lp = delta.prefix::<Position>(&prefix_lp);
+
+    let stream_open_lp = stream_lp.filter_map(|entry| async {
+        match entry {
+            Ok((_, lp)) if lp.state == position::State::Opened => Some(lp),
+            _ => None,
+        }
+    });
+
+    while let Some(lp) = stream_open_lp.next().await {
+        // Re-hash the position, since the key is a bech32 string.
+        let id = lp.id();
+        // Close the position, adjusting all its index entries.
+        delta.close_position_by_id(&id).await?;
+        // Erase the position from the state, so that we circumvent the `update_position` guard.
+        delta.delete(penumbra_dex::state_key::position_by_id(&id));
+        // Open a position with the adjusted indexing logic.
+        delta.open_position(lp).await?;
+    }
+    tracing::info!("completed dex migration");
 }
