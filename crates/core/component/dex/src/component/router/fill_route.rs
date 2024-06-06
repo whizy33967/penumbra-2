@@ -370,7 +370,7 @@ impl<S: StateRead + StateWrite> Frontier<S> {
 
         for pair in &pairs {
             'next_position: loop {
-                let (id, lp) = positions_by_price
+                let (id, position) = positions_by_price
                     .get_mut(pair)
                     .expect("positions_by_price should have an entry for each pair")
                     .as_mut()
@@ -381,7 +381,6 @@ impl<S: StateRead + StateWrite> Frontier<S> {
 
                 // Check that the position is not already part of the frontier.
                 if !position_ids.contains(&id) {
-                    let position = lp;
                     position_ids.insert(id);
                     positions.push(position);
 
