@@ -5136,6 +5136,7 @@ dependencies = [
  "penumbra-asset",
  "penumbra-community-pool",
  "penumbra-distributions",
+ "penumbra-num",
  "penumbra-proto",
  "penumbra-sct",
  "penumbra-shielded-pool",
