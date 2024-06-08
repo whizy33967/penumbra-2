@@ -5041,6 +5041,7 @@ dependencies = [
  "penumbra-sct",
  "penumbra-shielded-pool",
  "penumbra-tct",
+ "penumbra-test-subscriber",
  "penumbra-txhash",
  "poseidon377",
  "proptest",
