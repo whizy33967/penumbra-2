@@ -79,7 +79,10 @@ pub(crate) trait Ics2ClientExt: StateWrite {
                     trusted_client_state
                         .with_header(verified_header.clone())
                         .expect("able to add header to client state")
-                        .with_frozen_height(verified_header.height()),
+                        .with_frozen_height(ibc_types::core::client::Height {
+                            revision_number: 0,
+                            revision_height: 1,
+                        }),
                     verified_consensus_state,
                 );
             }
@@ -106,7 +109,10 @@ pub(crate) trait Ics2ClientExt: StateWrite {
                     trusted_client_state
                         .with_header(verified_header.clone())
                         .expect("able to add header to client state")
-                        .with_frozen_height(verified_header.height()),
+                        .with_frozen_height(ibc_types::core::client::Height {
+                            revision_number: 0,
+                            revision_height: 1,
+                        }),
                     verified_consensus_state,
                 );
             }
@@ -119,7 +125,10 @@ pub(crate) trait Ics2ClientExt: StateWrite {
                     trusted_client_state
                         .with_header(verified_header.clone())
                         .expect("able to add header to client state")
-                        .with_frozen_height(verified_header.height()),
+                        .with_frozen_height(ibc_types::core::client::Height {
+                            revision_number: 0,
+                            revision_height: 1,
+                        }),
                     verified_consensus_state,
                 );
             }
@@ -151,6 +160,7 @@ pub trait ConsensusStateWriteExt: StateWrite + Sized {
         );
 
         let current_height = HI::get_block_height(&self).await?;
+        let revision_number = HI::get_revision_number(&self).await?;
         let current_time: ibc_types::timestamp::Timestamp =
             HI::get_block_timestamp(&self).await?.into();
 
@@ -161,7 +171,7 @@ pub trait ConsensusStateWriteExt: StateWrite + Sized {
 
         self.put(
             state_key::client_processed_heights(&client_id, &height),
-            ibc_types::core::client::Height::new(0, current_height)?,
+            ibc_types::core::client::Height::new(revision_number, current_height)?,
         );
 
         // update verified heights

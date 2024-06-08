@@ -903,9 +903,12 @@ pub trait StateWriteExt: StateWrite + penumbra_ibc::component::ConnectionStateWr
                 let client_id = &ClientId::from_str(client_id)
                     .map_err(|e| tonic::Status::aborted(format!("invalid client id: {e}")))?;
                 let client_state = self.get_client_state(client_id).await?;
-                let client_height = client_state.latest_height();
 
-                let frozen_client = client_state.with_frozen_height(client_height);
+                let frozen_client =
+                    client_state.with_frozen_height(ibc_types::core::client::Height {
+                        revision_number: 0,
+                        revision_height: 1,
+                    });
                 self.put_client(client_id, frozen_client);
             }
             ProposalPayload::UnfreezeIbcClient { client_id } => {
